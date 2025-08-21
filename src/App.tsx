@@ -9,6 +9,7 @@ import ProfilePage from './pages/ProfilePage';
 import MoreCategoryPage from './pages/MoreCategoryPage';
 import SpecialOffersPage from './pages/SpecialOffersPage';
 import DishDetailPage from './pages/DishDetailPage';
+import ProfileFormPage from './pages/ProfileFormPage';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path="/more-category" element={<MoreCategoryPage />} />
           <Route path="/special-offers" element={<SpecialOffersPage />} />
           <Route path="/dish/:id" element={<DishDetailPage />} />
+          <Route path="/profile/edit" element={<ProfileFormPage />} />
         </Routes>
         <BottomNav />
       </div>
