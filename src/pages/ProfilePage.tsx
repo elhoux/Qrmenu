@@ -1,25 +1,61 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiEdit3, FiUser, FiMail, FiPhone, FiCalendar, FiAward } from 'react-icons/fi';
+import { profileService, ProfileData } from '../services/profileService';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ID du profil - en production, cela viendrait de l'authentification
+  const profileId = 1;
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setLoading(true);
+        const profileData = await profileService.getProfile(profileId);
+        setProfile(profileData);
+      } catch (err) {
+        console.error('Erreur lors du chargement du profil:', err);
+        setError('Impossible de charger le profil');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [profileId]);
 
   const handleEditProfile = () => {
     navigate('/profile/edit');
   };
 
-  // Mock user data - in production this would come from your state management or API
-  const userData = {
-    fullName: 'John Doe',
-    nickname: 'Johnny',
-    email: 'john.doe@example.com',
-    phone: '+1 555 123 4567',
-    dateOfBirth: '1990-05-15',
-    gender: 'Male',
-    points: 125,
-    profileImage: null
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background pb-24">
+        <div className="max-w-mobile mx-auto px-4 pt-12">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-text-secondary">Chargement du profil...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="min-h-screen bg-background pb-24">
+        <div className="max-w-mobile mx-auto px-4 pt-12">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-red-500">{error || 'Profil non trouvé'}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -40,9 +76,9 @@ const ProfilePage = () => {
           {/* Profile Image and Basic Info */}
           <div className="flex items-center gap-4 mb-6">
             <div className="w-20 h-20 rounded-full bg-gray-100 border-4 border-white shadow-lg overflow-hidden">
-              {userData.profileImage ? (
+              {profile.profileImage ? (
                 <img
-                  src={userData.profileImage}
+                  src={`http://localhost:5000${profile.profileImage}`}
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />
@@ -54,13 +90,13 @@ const ProfilePage = () => {
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-semibold text-text-primary mb-1">
-                {userData.fullName}
+                {profile.name}
               </h2>
-              <p className="text-text-secondary mb-2">@{userData.nickname}</p>
+              <p className="text-text-secondary mb-2">@{profile.username}</p>
               <div className="flex items-center gap-2">
                 <FiAward size={16} className="text-accent" />
                 <span className="text-sm font-medium text-accent">
-                  {userData.points} points
+                  {profile.points} points
                 </span>
               </div>
             </div>
@@ -72,7 +108,7 @@ const ProfilePage = () => {
               <FiMail size={20} className="text-primary" />
               <div className="flex-1">
                 <p className="text-xs text-text-secondary mb-1">Email</p>
-                <p className="text-text-primary font-medium">{userData.email}</p>
+                <p className="text-text-primary font-medium">{profile.email}</p>
               </div>
             </div>
 
@@ -80,7 +116,7 @@ const ProfilePage = () => {
               <FiPhone size={20} className="text-primary" />
               <div className="flex-1">
                 <p className="text-xs text-text-secondary mb-1">Phone</p>
-                <p className="text-text-primary font-medium">{userData.phone}</p>
+                <p className="text-text-primary font-medium">{profile.phone}</p>
               </div>
             </div>
 
@@ -89,7 +125,7 @@ const ProfilePage = () => {
               <div className="flex-1">
                 <p className="text-xs text-text-secondary mb-1">Date of Birth</p>
                 <p className="text-text-primary font-medium">
-                  {new Date(userData.dateOfBirth).toLocaleDateString('en-US', {
+                  {new Date(profile.dateOfBirth).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
@@ -102,7 +138,7 @@ const ProfilePage = () => {
               <FiUser size={20} className="text-primary" />
               <div className="flex-1">
                 <p className="text-xs text-text-secondary mb-1">Gender</p>
-                <p className="text-text-primary font-medium">{userData.gender}</p>
+                <p className="text-text-primary font-medium">{profile.gender}</p>
               </div>
             </div>
           </div>
