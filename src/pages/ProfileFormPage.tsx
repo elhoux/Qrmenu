@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiArrowLeft, FiCamera, FiCalendar, FiMail, FiPhone, FiUser, FiAward } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import { profileService, ProfileData } from '../services/profileService';
 
 interface ProfileFormData {
-  fullName: string;
-  nickname: string;
+  name: string;
+  username: string;
   dateOfBirth: string;
   email: string;
   phone: string;
@@ -16,9 +17,10 @@ interface ProfileFormData {
 const ProfileFormPage = () => {
   const navigate = useNavigate();
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [formData, setFormData] = useState<ProfileFormData>({
-    fullName: '',
-    nickname: '',
+    name: '',
+    username: '',
     dateOfBirth: '',
     email: '',
     phone: '',
@@ -26,8 +28,52 @@ const ProfileFormPage = () => {
     gender: '',
     points: 0
   });
-
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState<Partial<ProfileFormData>>({});
+
+  // ID du profil - en production, cela viendrait de l'authentification
+  const profileId = 1;
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setInitialLoading(true);
+        const profile = await profileService.getProfile(profileId);
+        
+        if (profile) {
+          // Convertir la date ISO en format yyyy-MM-dd pour l'input date
+          const formatDateForInput = (dateString: string) => {
+            const date = new Date(dateString);
+            return date.toISOString().split('T')[0];
+          };
+
+          setFormData({
+            name: profile.name,
+            username: profile.username,
+            dateOfBirth: formatDateForInput(profile.dateOfBirth),
+            email: profile.email,
+            phone: profile.phone,
+            countryCode: '+1', // Par défaut
+            gender: profile.gender,
+            points: profile.points
+          });
+
+          // Charger l'image de profil si elle existe
+          if (profile.profileImage) {
+            setProfileImage(`http://localhost:5000${profile.profileImage}`);
+          }
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement du profil:', err);
+        // Continuer avec un formulaire vide en cas d'erreur
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [profileId]);
 
   const handleBack = () => {
     navigate(-1);
@@ -39,6 +85,7 @@ const ProfileFormPage = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         setProfileImage(e.target?.result as string);
+        setProfileImageFile(file);
       };
       reader.readAsDataURL(file);
     }
@@ -62,12 +109,12 @@ const ProfileFormPage = () => {
   const validateForm = (): boolean => {
     const newErrors: Partial<ProfileFormData> = {};
 
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
     }
 
-    if (!formData.nickname.trim()) {
-      newErrors.nickname = 'Nickname is required';
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
     }
 
     if (!formData.dateOfBirth) {
@@ -92,19 +139,49 @@ const ProfileFormPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (validateForm()) {
-      // Here you would typically save the profile data
-      console.log('Profile data:', formData);
-      console.log('Profile image:', profileImage);
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      setLoading(true);
       
-      // Show success message and navigate
-      alert('Profile saved successfully!');
+      const profileData: Omit<ProfileData, 'id'> = {
+        name: formData.name,
+        username: formData.username,
+        email: formData.email,
+        phone: formData.phone,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender as 'Male' | 'Female' | 'Other',
+        points: formData.points
+      };
+
+      // Utiliser saveProfile qui gère automatiquement POST vs PUT avec image
+      await profileService.saveProfile(profileId, profileData, profileImageFile || undefined);
+
+      alert('Profil sauvegardé avec succès!');
       navigate('/profile');
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde du profil. Veuillez réessayer.');
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-text-secondary">Chargement du profil...</p>
+        </div>
+      </div>
+    );
+  }
 
   const countryCodes = [
     { code: '+1', country: 'US', flag: '🇺🇸' },
@@ -164,49 +241,49 @@ const ProfileFormPage = () => {
             </div>
           </div>
 
-          {/* Full Name */}
+          {/* Name */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
-              Full Name
+              Name
             </label>
             <div className="relative">
               <input
                 type="text"
-                value={formData.fullName}
-                onChange={(e) => handleInputChange('fullName', e.target.value)}
-                placeholder="Enter your full name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                placeholder="Enter your name"
                 className={`w-full px-4 py-4 bg-white rounded-xl border-2 transition-colors focus:outline-none ${
-                  errors.fullName 
+                  errors.name 
                     ? 'border-red-300 focus:border-red-500' 
                     : 'border-gray-200 focus:border-primary'
                 }`}
               />
             </div>
-            {errors.fullName && (
-              <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-600">{errors.name}</p>
             )}
           </div>
 
-          {/* Nickname */}
+          {/* Username */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
-              Nickname
+              Username
             </label>
             <div className="relative">
               <input
                 type="text"
-                value={formData.nickname}
-                onChange={(e) => handleInputChange('nickname', e.target.value)}
-                placeholder="Enter your nickname"
+                value={formData.username}
+                onChange={(e) => handleInputChange('username', e.target.value)}
+                placeholder="Enter your username"
                 className={`w-full px-4 py-4 bg-white rounded-xl border-2 transition-colors focus:outline-none ${
-                  errors.nickname 
+                  errors.username 
                     ? 'border-red-300 focus:border-red-500' 
                     : 'border-gray-200 focus:border-primary'
                 }`}
               />
             </div>
-            {errors.nickname && (
-              <p className="mt-1 text-sm text-red-600">{errors.nickname}</p>
+            {errors.username && (
+              <p className="mt-1 text-sm text-red-600">{errors.username}</p>
             )}
           </div>
 
@@ -342,6 +419,22 @@ const ProfileFormPage = () => {
               </p>
             </div>
           </div>
+
+          {/* Additional Action Button */}
+          <div className="pt-6">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={loading}
+              className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors border-2 ${
+                loading 
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed border-gray-400' 
+                  : 'bg-gray-100 text-text-primary hover:bg-gray-200 border-gray-200'
+              }`}
+            >
+              {loading ? 'Sauvegarde...' : 'Modifier le profil'}
+            </button>
+          </div>
         </form>
       </div>
 
@@ -350,9 +443,14 @@ const ProfileFormPage = () => {
         <div className="max-w-mobile mx-auto">
           <button
             onClick={handleSubmit}
-            className="w-full py-4 bg-primary text-white rounded-xl font-semibold text-lg hover:bg-primary-600 transition-colors"
+            disabled={loading}
+            className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors ${
+              loading 
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                : 'bg-primary text-white hover:bg-primary-600'
+            }`}
           >
-            Continue
+            {loading ? 'Sauvegarde...' : 'Continue'}
           </button>
         </div>
       </div>
