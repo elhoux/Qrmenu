@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiMoreHorizontal } from 'react-icons/fi';
 import { categories } from '../mock/menu';
 import SectionHeader from './SectionHeader';
 
-const CategoryChips = () => {
-  const [activeCategory, setActiveCategory] = useState('1');
+interface CategoryChipsProps {
+  activeId?: string;
+  onChange?: (id: string, name: string) => void;
+}
+
+const CategoryChips: React.FC<CategoryChipsProps> = ({ activeId, onChange }) => {
+  const [activeCategory, setActiveCategory] = useState(activeId ?? '1');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (activeId && activeId !== activeCategory) {
+      setActiveCategory(activeId);
+    }
+  }, [activeId]);
 
   const handleMoreClick = () => {
     navigate('/more-category');
@@ -26,7 +37,10 @@ const CategoryChips = () => {
         {categories.map((category) => (
           <button
             key={category.id}
-            onClick={() => setActiveCategory(category.id)}
+            onClick={() => {
+              setActiveCategory(category.id);
+              onChange?.(category.id, category.name);
+            }}
             className={`
               flex-shrink-0 flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-200
               ${activeCategory === category.id

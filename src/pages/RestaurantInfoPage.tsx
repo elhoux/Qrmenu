@@ -3,6 +3,8 @@ import { FiArrowLeft, FiPhone, FiMail, FiGlobe, FiMapPin, FiStar, FiWifi, FiHome
 import { FaCar } from 'react-icons/fa';
 import { FaInstagram, FaFacebook, FaTiktok } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import CategoryChips from '../components/CategoryChips';
+import FilterRow, { SortOption } from '../components/FilterRow';
 
 interface Review {
   id: string;
@@ -17,6 +19,10 @@ const RestaurantInfoPage = () => {
   const navigate = useNavigate();
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [newReviewComment, setNewReviewComment] = useState('');
+  // Local UI state for Categories/Filters section on this page
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('1');
+  const [sortBy, setSortBy] = useState<SortOption>('Default');
+  const [topRatedOnly, setTopRatedOnly] = useState<boolean>(false);
 
   const handleBack = () => {
     navigate(-1);
@@ -257,6 +263,20 @@ const RestaurantInfoPage = () => {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Section Catégories + Filtres */}
+        <div className="mb-6">
+          <CategoryChips 
+            activeId={selectedCategoryId}
+            onChange={(id) => setSelectedCategoryId(id)}
+          />
+          <FilterRow 
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            topRatedOnly={topRatedOnly}
+            onToggleTopRated={() => setTopRatedOnly((v) => !v)}
+          />
         </div>
 
         {/* Section Avis des clients */}

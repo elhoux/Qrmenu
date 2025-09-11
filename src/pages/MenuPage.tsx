@@ -1,16 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
 import SectionHeader from '../components/SectionHeader';
 import PromoBanner from '../components/PromoBanner';
 import DiscountCarousel from '../components/DiscountCarousel';
 import CategoryChips from '../components/CategoryChips';
-import FilterRow from '../components/FilterRow';
+import FilterRow, { SortOption } from '../components/FilterRow';
 import RestaurantList from '../components/RestaurantList';
 import { useNavigate } from 'react-router-dom';
 
 const MenuPage = () => {
   const navigate = useNavigate();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('1');
+  const [selectedCategoryName, setSelectedCategoryName] = useState<string>('Promotions');
+  const [sortBy, setSortBy] = useState<SortOption>('Default');
+  const [topRatedOnly, setTopRatedOnly] = useState<boolean>(false);
 
   const handleSpecialOffersSeeAll = () => {
     navigate('/special-offers');
@@ -31,10 +35,25 @@ const MenuPage = () => {
         <SectionHeader title="Discount Guaranteed! 👆" />
         <DiscountCarousel />
         
-        <CategoryChips />
-        <FilterRow />
+        <CategoryChips 
+          activeId={selectedCategoryId}
+          onChange={(id, name) => {
+            setSelectedCategoryId(id);
+            setSelectedCategoryName(name);
+          }}
+        />
+        <FilterRow 
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          topRatedOnly={topRatedOnly}
+          onToggleTopRated={() => setTopRatedOnly((v) => !v)}
+        />
         
-        <RestaurantList />
+        <RestaurantList 
+          selectedCategoryName={selectedCategoryName}
+          sortBy={sortBy}
+          topRatedOnly={topRatedOnly}
+        />
       </div>
     </div>
   );
