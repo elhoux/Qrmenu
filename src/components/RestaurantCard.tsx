@@ -1,139 +1,76 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FiHeart } from 'react-icons/fi';
-import { RestaurantCard as RestaurantCardType } from '../mock/menu';
+import PriceTag from './PriceTag';
+import RatingStars from './RatingStars';
+import LikeButton from './LikeButton';
 
 interface RestaurantCardProps {
-  restaurant: RestaurantCardType;
-  onToggleFavorite?: (id: string) => void;
-  viewMode?: 'list' | 'grid';
+  productId: number;
+  profileId: number;
+  name: string;
+  image: string;
+  rating: number;
+  price: number;
+  distance: string;
+  deliveryTime: string;
+  category: string;
   onClick?: () => void;
 }
 
-const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant, onToggleFavorite, viewMode = 'list', onClick }) => {
-  const navigate = useNavigate();
-
-  const handleCardClick = () => {
-    if (onClick) {
-      onClick();
-    } else {
-      navigate(`/dish/${restaurant.id}`);
-    }
+const RestaurantCard: React.FC<RestaurantCardProps> = ({
+  productId,
+  profileId,
+  name,
+  image = '/images/default-image.jpg', // Default image
+  rating = 0, // Default rating
+  price = 0, // Default price
+  distance,
+  deliveryTime,
+  category,
+  onClick
+}) => {
+  const resolveImageSrc = (src?: string) => {
+    if (!src) return '/images/default-image.jpg';
+    if (src.startsWith('http')) return src;
+    return `http://localhost:5000${src.startsWith('/') ? '' : '/'}${src}`;
   };
-
-  if (viewMode === 'grid') {
-    return (
-      <div 
-        onClick={handleCardClick}
-        className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 active:scale-95 transition-transform cursor-pointer"
-      >
-        <div className="relative mb-3">
-          <img
-            src={restaurant.imageUrl}
-            alt={restaurant.title}
-            className="w-full h-24 rounded-xl object-cover"
-            loading="lazy"
-          />
-          <button
-            onClick={() => onToggleFavorite?.(restaurant.id)}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite?.(restaurant.id);
-            }}
-            className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white transition-colors"
-            aria-label={restaurant.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-          >
-            <FiHeart 
-              size={14} 
-              className={`
-                ${restaurant.isFavorite 
-                  ? 'text-danger fill-current' 
-                  : 'text-gray-400'
-                }
-              `} 
-            />
-          </button>
-        </div>
-        
-        <div>
-          <h3 className="font-medium text-text-primary text-sm mb-1 line-clamp-2">
-            {restaurant.title}
-          </h3>
-          <div className="flex items-center justify-between text-xs text-text-secondary mb-1">
-            {restaurant.sizeLabel && (
-              <span>{restaurant.sizeLabel}</span>
-            )}
-            {restaurant.rating && (
-              <div className="flex items-center gap-1">
-                <span>⭐</span>
-                <span>{restaurant.rating}</span>
-              </div>
-            )}
-          </div>
-          {restaurant.price && (
-            <span className="text-primary font-semibold text-sm">
-              ${restaurant.price.toFixed(2)}
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div 
-      onClick={handleCardClick}
-      className="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 active:scale-95 transition-transform cursor-pointer"
+      onClick={onClick}
+      className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 active:scale-95 transition-transform cursor-pointer"
     >
-      <div className="flex items-center gap-4">
+      <div className="relative mb-3">
         <img
-          src={restaurant.imageUrl}
-          alt={restaurant.title}
-          className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+          src={resolveImageSrc(image)}
+          alt={name}
+          className="w-full h-24 rounded-xl object-cover"
           loading="lazy"
         />
-        
-        <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-text-primary mb-1 truncate">
-            {restaurant.title}
-          </h3>
-          <div className="flex items-center gap-3 text-xs text-text-secondary">
-            {restaurant.sizeLabel && (
-              <span>{restaurant.sizeLabel}</span>
-            )}
-            {restaurant.rating && (
-              <div className="flex items-center gap-1">
-                <span>⭐</span>
-                <span>{restaurant.rating}</span>
-              </div>
-            )}
-            {restaurant.price && (
-              <span className="text-primary font-medium">
-                ${restaurant.price.toFixed(2)}
-              </span>
-            )}
-          </div>
+        <div className="absolute top-2 right-2">
+          <LikeButton productId={productId} profileId={profileId} />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <div className="flex items-start justify-between">
+          <h3 className="font-medium text-text-primary line-clamp-1">{name}</h3>
+          <PriceTag price={price} />
         </div>
 
-        <button
-          onClick={() => onToggleFavorite?.(restaurant.id)}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite?.(restaurant.id);
-          }}
-          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          aria-label={restaurant.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-        >
-          <FiHeart 
-            size={20} 
-            className={`
-              ${restaurant.isFavorite 
-                ? 'text-danger fill-current' 
-                : 'text-gray-400 hover:text-gray-500'
-              }
-            `} 
-          />
-        </button>
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-1">
+            <RatingStars rating={rating} />
+            <span className="text-text-secondary">({typeof rating === 'number' ? rating.toFixed(1) : 'N/A'})</span>
+          </div>
+          <span className="text-text-secondary">{category}</span>
+        </div>
+
+        {(distance || deliveryTime) && (
+          <div className="flex items-center justify-between text-sm text-text-secondary">
+            {distance && <span>{distance}</span>}
+            {deliveryTime && <span>{deliveryTime}</span>}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,21 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiGrid, FiList } from 'react-icons/fi';
-import { restaurants as initialRestaurants } from '../mock/menu';
 import RestaurantCard from './RestaurantCard';
+import productService, { Product } from '../services/productService';
+import { useNavigate } from 'react-router-dom';
 
 const RestaurantList = () => {
-  const [restaurants, setRestaurants] = useState(initialRestaurants);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const navigate = useNavigate();
 
-  const handleToggleFavorite = (id: string) => {
-    setRestaurants(prev => 
-      prev.map(restaurant => 
-        restaurant.id === id 
-          ? { ...restaurant, isFavorite: !restaurant.isFavorite }
-          : restaurant
-      )
-    );
-  };
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        const data = await productService.getAllProducts();
+        setProducts(data);
+      } catch (err) {
+        console.error('Error loading products:', err);
+        setError('Failed to load products');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   return (
     <div>
@@ -48,21 +59,37 @@ const RestaurantList = () => {
         </div>
       </div>
 
-      {/* Restaurant Cards */}
-      <div className={
-        viewMode === 'grid' 
-          ? 'grid grid-cols-2 gap-3' 
-          : 'space-y-3'
-      }>
-        {restaurants.map(restaurant => (
-          <RestaurantCard
-            key={restaurant.id}
-            restaurant={restaurant}
-            viewMode={viewMode}
-            onToggleFavorite={handleToggleFavorite}
-          />
-        ))}
-      </div>
+      {loading && (
+        <div className="text-center py-4">Loading products...</div>
+      )}
+      
+      {error && (
+        <div className="text-center py-4 text-red-500">{error}</div>
+      )}
+
+      {!loading && !error && (
+        <div className={
+          viewMode === 'grid' 
+            ? 'grid grid-cols-2 gap-3' 
+            : 'space-y-3'
+        }>
+          {products.map((product) => (
+            <RestaurantCard
+              key={product.id}
+              productId={product.id}
+              profileId={1}
+              name={product.name}
+              image={product.image}
+              rating={product.rating}
+              price={product.price}
+              distance=""
+              deliveryTime=""
+              category={product.category}
+              onClick={() => navigate(`/product/${product.id}`)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

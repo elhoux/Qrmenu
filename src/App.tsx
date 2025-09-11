@@ -24,6 +24,7 @@ function App() {
           <Route path="/more-category" element={<MoreCategoryPage />} />
           <Route path="/special-offers" element={<SpecialOffersPage />} />
           <Route path="/dish/:id" element={<DishDetailPage />} />
+          <Route path="/product/:id" element={<DishDetailPage />} />
           <Route path="/profile/edit" element={<ProfileFormPage />} />
         </Routes>
         <BottomNav />

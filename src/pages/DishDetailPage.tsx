@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiArrowLeft, FiStar, FiClock, FiPlus, FiMinus } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
+import LikeButton from '../components/LikeButton';
 
 interface DishSize {
   id: string;
@@ -15,27 +16,26 @@ interface Extra {
   price: number;
 }
 
-interface NutritionalInfo {
-  calories: number;
+interface Dish {
+  id: string;
+  name: string;
+  image: string;
+  rating: number;
+  description: string;
+  price: number;
+  category: string;
+  isAvailable: boolean;
   protein: number;
   carbs: number;
   fat: number;
   fiber: number;
-}
-
-interface Dish {
-  id: string;
-  name: string;
-  imageUrl: string;
-  rating: number;
-  reviewsCount: number;
-  prepTime: string;
-  description: string;
-  ingredients: string[];
-  allergens: string[];
-  sizes: DishSize[];
-  extras: Extra[];
-  nutritionalInfo: NutritionalInfo;
+  // Optional fields that might be used in the UI
+  reviewsCount?: number;
+  prepTime?: string;
+  ingredients?: string[];
+  allergens?: string[];
+  sizes?: DishSize[];
+  extras?: Extra[];
 }
 
 const DishDetailPage = () => {
@@ -46,37 +46,37 @@ const DishDetailPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'description' | 'ingredients' | 'allergens'>('description');
   const [nutritionTab, setNutritionTab] = useState<'portion' | '100g'>('portion');
-
-  // Mock data - en production, cela viendrait d'une API
-  const dish: Dish = {
-    id: '1',
-    name: 'Mixed Salad Bowl',
-    imageUrl: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800',
-    rating: 4.9,
-    reviewsCount: 124,
-    prepTime: '15 min',
-    description: 'Une salade fraîche et colorée composée de légumes de saison, accompagnée de notre vinaigrette maison. Parfaite pour un repas léger et nutritif.',
-    ingredients: ['Salade verte', 'Tomates cerises', 'Concombre', 'Avocat', 'Feta', 'Olives noires', 'Vinaigrette maison'],
-    allergens: ['Lait (feta)', 'Peut contenir des traces de noix'],
-    sizes: [
-      { id: 'small', name: 'Petit', price: 8.50, calories: 280 },
-      { id: 'medium', name: 'Moyen', price: 11.50, calories: 420 },
-      { id: 'large', name: 'Grand', price: 14.50, calories: 560 }
-    ],
-    extras: [
-      { id: 'extra-cheese', name: 'Extra fromage', price: 2.00 },
-      { id: 'extra-avocado', name: 'Extra avocat', price: 2.50 },
-      { id: 'grilled-chicken', name: 'Poulet grillé', price: 4.00 },
-      { id: 'drink', name: 'Boisson', price: 3.00 }
-    ],
-    nutritionalInfo: {
-      calories: 420,
-      protein: 18,
-      carbs: 25,
-      fat: 28,
-      fiber: 12
-    }
+  const [dish, setDish] = useState<Dish | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Use the product's nutritional values or default to 0
+  const getNutritionalValue = (value: number | undefined): number => {
+    return value || 0;
   };
+  
+  // Ensure sizes and extras are always arrays
+  const sizes = Array.isArray(dish?.sizes) ? dish.sizes : [];
+  const extras = Array.isArray(dish?.extras) ? dish.extras : [];
+
+  useEffect(() => {
+    const fetchDishDetails = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/products/${id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch dish details');
+        }
+        const data = await response.json();
+        setDish(data);
+      } catch (err) {
+        setError((err as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDishDetails();
+  }, [id]);
 
   const handleBack = () => {
     navigate(-1);
@@ -102,10 +102,10 @@ const DishDetailPage = () => {
   };
 
   const calculateTotal = () => {
-    const selectedSizeObj = dish.sizes.find(size => size.id === selectedSize);
+    const selectedSizeObj = dish?.sizes?.find(size => size.id === selectedSize) || null;
     const sizePrice = selectedSizeObj?.price || 0;
     const extrasPrice = selectedExtras.reduce((total, extraId) => {
-      const extra = dish.extras.find(e => e.id === extraId);
+      const extra = extras.find(e => e.id === extraId);
       return total + (extra?.price || 0);
     }, 0);
     return (sizePrice + extrasPrice) * quantity;
@@ -116,7 +116,7 @@ const DishDetailPage = () => {
     
     // Ici on ajouterait la logique pour ajouter au panier
     console.log('Ajout au panier:', {
-      dish: dish.id,
+      dish: dish?.id,
       size: selectedSize,
       extras: selectedExtras,
       quantity,
@@ -128,15 +128,20 @@ const DishDetailPage = () => {
   };
 
   const getPriceRange = () => {
-    const prices = dish.sizes.map(size => size.price);
+    const prices = dish?.sizes?.map(size => size.price) || [];
     const min = Math.min(...prices);
     const max = Math.max(...prices);
     return min === max ? `$${min.toFixed(2)}` : `$${min.toFixed(2)} - $${max.toFixed(2)}`;
   };
 
   const getSelectedSizeCalories = () => {
-    const selectedSizeObj = dish.sizes.find(size => size.id === selectedSize);
-    return selectedSizeObj?.calories || dish.nutritionalInfo.calories;
+    if (!dish) return 0;
+    // Since we don't have calories in the model, we'll calculate an estimate
+    // based on macronutrients (4 cal/g protein, 4 cal/g carbs, 9 cal/g fat)
+    const proteinCalories = (dish.protein || 0) * 4;
+    const carbCalories = (dish.carbs || 0) * 4;
+    const fatCalories = (dish.fat || 0) * 9;
+    return Math.round(proteinCalories + carbCalories + fatCalories);
   };
 
   const CircularProgress = ({ value, max, label, color = 'primary' }: { value: number; max: number; label: string; color?: string }) => {
@@ -180,12 +185,36 @@ const DishDetailPage = () => {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-text-secondary">Chargement en cours...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-red-500">Erreur: {error}</div>
+      </div>
+    );
+  }
+
+  if (!dish) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-text-secondary">Aucun plat trouvé</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Image */}
       <div className="relative">
         <img
-          src={dish.imageUrl}
+          src={dish.image && !dish.image.startsWith('http') ? `http://localhost:5000${dish.image.startsWith('/') ? '' : '/'}${dish.image}` : dish.image}
           alt={dish.name}
           className="w-full h-64 object-cover"
         />
@@ -198,6 +227,12 @@ const DishDetailPage = () => {
         >
           <FiArrowLeft size={24} className="text-text-primary" />
         </button>
+
+        {/* Like Button */}
+        <div className="absolute top-4 right-4 z-10">
+          {/* TODO: replace profileId with real logged-in profile id */}
+          <LikeButton productId={Number(dish.id)} profileId={1} />
+        </div>
       </div>
 
       <div className="max-w-mobile mx-auto px-4 pb-32">
@@ -260,15 +295,15 @@ const DishDetailPage = () => {
           </div>
 
           <div className="grid grid-cols-4 gap-4 mb-4">
-            <CircularProgress value={dish.nutritionalInfo.protein} max={50} label="Protéines" color="primary" />
-            <CircularProgress value={dish.nutritionalInfo.carbs} max={100} label="Glucides" color="accent" />
-            <CircularProgress value={dish.nutritionalInfo.fat} max={50} label="Lipides" color="orange-500" />
-            <CircularProgress value={dish.nutritionalInfo.fiber} max={30} label="Fibres" color="green-500" />
+            <CircularProgress value={getNutritionalValue(dish.protein)} max={50} label="Protéines" color="primary" />
+            <CircularProgress value={getNutritionalValue(dish.carbs)} max={100} label="Glucides" color="accent" />
+            <CircularProgress value={getNutritionalValue(dish.fat)} max={50} label="Lipides" color="orange-500" />
+            <CircularProgress value={getNutritionalValue(dish.fiber)} max={30} label="Fibres" color="green-500" />
           </div>
 
           <div className="text-center">
             <div className="text-2xl font-bold text-text-primary mb-1">
-              {dish.nutritionalInfo.calories} calories
+              {getSelectedSizeCalories()} calories
             </div>
             <p className="text-xs text-text-secondary">
               Calcul basé sur la préparation standard
@@ -307,17 +342,17 @@ const DishDetailPage = () => {
             )}
             {activeTab === 'ingredients' && (
               <ul className="space-y-2">
-                {dish.ingredients.map((ingredient, index) => (
+                {dish.ingredients?.map((ingredient, index) => (
                   <li key={index} className="flex items-center gap-2 text-text-secondary">
                     <span className="w-1.5 h-1.5 bg-primary rounded-full"></span>
                     {ingredient}
                   </li>
-                ))}
+                )) || <li className="text-text-secondary">No ingredients listed</li>}
               </ul>
             )}
             {activeTab === 'allergens' && (
               <ul className="space-y-2">
-                {dish.allergens.map((allergen, index) => (
+                {dish.allergens?.map((allergen, index) => (
                   <li key={index} className="flex items-center gap-2 text-text-secondary">
                     <span className="text-orange-500">⚠️</span>
                     {allergen}
@@ -332,7 +367,7 @@ const DishDetailPage = () => {
         <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm">
           <h2 className="text-lg font-semibold text-text-primary mb-4">Choisir la taille</h2>
           <div className="grid grid-cols-3 gap-3">
-            {dish.sizes.map((size) => (
+            {sizes.map((size) => (
               <button
                 key={size.id}
                 onClick={() => handleSizeSelect(size.id)}
@@ -366,7 +401,7 @@ const DishDetailPage = () => {
         <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm">
           <h2 className="text-lg font-semibold text-text-primary mb-4">Extras</h2>
           <div className="space-y-3">
-            {dish.extras.map((extra) => (
+            {extras.map((extra) => (
               <label
                 key={extra.id}
                 className="flex items-center justify-between p-3 rounded-xl border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors"
