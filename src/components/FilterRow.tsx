@@ -1,5 +1,19 @@
-import React from 'react';
-import { FiChevronDown, FiFilter } from 'react-icons/fi';
+import React, { useState, useRef, useEffect } from 'react';
+import { FiChevronDown, FiStar, FiFilter } from 'react-icons/fi';
+
+interface FilterOption {
+  id: string;
+  label: string;
+}
+
+interface Filter {
+  id: string;
+  label: string;
+  hasDropdown: boolean;
+  isActive?: boolean;
+  options?: FilterOption[];
+}
+
 
 export type SortOption = 'Default' | 'Price: Low to High' | 'Price: High to Low' | 'Rating: High to Low' | 'Name A-Z';
 
@@ -20,7 +34,55 @@ const FilterRow: React.FC<FilterRowProps> = ({ sortBy, onSortChange, topRatedOnl
     onSortChange(next);
   };
 
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpenDropdown(null);
+      }
+    };
+
+    if (openDropdown) {
+      setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openDropdown]);
+
+  const handleFilterClick = (filterId: string, hasDropdown: boolean) => {
+    if (hasDropdown) {
+      event?.stopPropagation();
+      setOpenDropdown(openDropdown === filterId ? null : filterId);
+    } else {
+      setActiveFilter(activeFilter === filterId ? null : filterId);
+      setOpenDropdown(null);
+    }
+  };
+
+  const handleOptionSelect = (filterId: string, optionId: string, optionLabel: string) => {
+    event?.stopPropagation();
+    setSelectedOptions(prev => ({
+      ...prev,
+      [filterId]: optionLabel
+    }));
+    setActiveFilter(filterId);
+    setOpenDropdown(null);
+  };
+
+  const getFilterLabel = (filter: Filter) => {
+    if (selectedOptions[filter.id]) {
+      return selectedOptions[filter.id];
+    }
+    return filter.label;
+  };
+
   return (
+
     <div className="flex gap-3 mb-6 overflow-x-auto scrollbar-hide">
       <button
         onClick={onFoodTypeClick}
@@ -47,6 +109,7 @@ const FilterRow: React.FC<FilterRowProps> = ({ sortBy, onSortChange, topRatedOnl
         <FiChevronDown size={16} className="text-current" />
         <span className="text-sm whitespace-nowrap">Top rated</span>
       </button>
+
     </div>
   );
 };
