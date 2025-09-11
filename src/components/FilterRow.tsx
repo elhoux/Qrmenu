@@ -28,6 +28,11 @@ interface FilterRowProps {
 const sortCycle: SortOption[] = ['Default', 'Price: Low to High', 'Price: High to Low', 'Rating: High to Low', 'Name A-Z'];
 
 const FilterRow: React.FC<FilterRowProps> = ({ sortBy, onSortChange, topRatedOnly, onToggleTopRated, onFoodTypeClick }) => {
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string }>({});
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const handleSortClick = () => {
     const idx = sortCycle.indexOf(sortBy);
     const next = sortCycle[(idx + 1) % sortCycle.length];
