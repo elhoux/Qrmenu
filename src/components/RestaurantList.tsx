@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { FiGrid, FiList } from 'react-icons/fi';
 import RestaurantCard from './RestaurantCard';
 import productService, { Product } from '../services/productService';
 import { useNavigate } from 'react-router-dom';
+import type { SortOption } from './FilterRow';
 
-const RestaurantList = () => {
+interface RestaurantListProps {
+  selectedCategoryName?: string;
+  sortBy?: SortOption;
+  topRatedOnly?: boolean;
+}
+
+const RestaurantList: React.FC<RestaurantListProps> = ({ selectedCategoryName, sortBy = 'Default', topRatedOnly = false }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +34,46 @@ const RestaurantList = () => {
 
     loadProducts();
   }, []);
+
+  const filteredProducts = useMemo(() => {
+    if (!selectedCategoryName || selectedCategoryName === 'Promotions') {
+      return products;
+    }
+    // Map UI chip names to backend categories
+    const nameToBackend: Record<string, string> = {
+      Burgers: 'American',
+      Pizza: 'Italian',
+    };
+    const mapped = nameToBackend[selectedCategoryName] ?? selectedCategoryName;
+    const target = mapped.toLowerCase();
+    return products.filter((p) => (p.category || '').toLowerCase() === target);
+  }, [products, selectedCategoryName]);
+
+  const filteredAndRated = useMemo(() => {
+    if (!topRatedOnly) return filteredProducts;
+    return filteredProducts.filter((p) => (p.rating ?? 0) >= 4.7);
+  }, [filteredProducts, topRatedOnly]);
+
+  const finalProducts = useMemo(() => {
+    const arr = [...filteredAndRated];
+    switch (sortBy) {
+      case 'Price: Low to High':
+        arr.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+        break;
+      case 'Price: High to Low':
+        arr.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+        break;
+      case 'Rating: High to Low':
+        arr.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+        break;
+      case 'Name A-Z':
+        arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        break;
+      default:
+        break; // Default preserves current order
+    }
+    return arr;
+  }, [filteredAndRated, sortBy]);
 
   return (
     <div>
@@ -73,7 +120,7 @@ const RestaurantList = () => {
             ? 'grid grid-cols-2 gap-3' 
             : 'space-y-3'
         }>
-          {products.map((product) => (
+          {finalProducts.map((product) => (
             <RestaurantCard
               key={product.id}
               productId={product.id}
